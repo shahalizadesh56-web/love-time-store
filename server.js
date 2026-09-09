@@ -96,6 +96,7 @@ app.get('/api/payment/callback', (req,res) => {
 
 app.get('/api/health', (req,res) => res.json({ok:true,service:'LOVE TIME API'}));
 
-const PORT = Number(process.env.PORT || 3000);\napp.listen(PORT, '0.0.0.0', () => {
+const PORT = Number(process.env.PORT || 3000);
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`LOVE TIME API running on port ${PORT}`);
 });
