@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: love-time-store
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PAYMENT_PROVIDER
+        value: demo
