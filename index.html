@@ -629,7 +629,62 @@ function ltAddToProCart(){
 function ltQtyCart(i,n){ltCart[i].qty+=n;if(ltCart[i].qty<1)ltCart.splice(i,1);ltRenderCart()}
 function ltRemoveCart(i){ltCart.splice(i,1);ltRenderCart()}
 function ltOpenCheckout(){if(!ltCart.length){alert('ابتدا حداقل یک محصول به سبد خرید اضافه کنید.');return}document.getElementById('ltCheckout').classList.add('show');document.getElementById('ltCheckout').scrollIntoView({behavior:'smooth',block:'center'})}
+  async function ltSubmitOrder(){
+  const n=document.getElementById('ltName').value.trim();
+  const p=document.getElementById('ltPhone').value.trim();
+  const a=document.getElementById('ltAddress').value.trim();
 
+  if(!n || !/^09\d{9}$/.test(p) || !a){
+    alert('لطفاً نام، شماره موبایل معتبر و آدرس را کامل وارد کنید.');
+    return;
+  }
+
+  if(!ltCart.length){
+    alert('سبد خرید خالی است.');
+    return;
+  }
+
+  const items=ltCart.map(x=>({
+    productId:Number(x.id),
+    quantity:Number(x.qty)
+  }));
+
+  try{
+    const response=await fetch('/api/orders',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        customer:{
+          name:n,
+          phone:p,
+          address:a
+        },
+        items:items
+      })
+    });
+
+    const data=await response.json();
+
+    if(!response.ok){
+      alert(data.error || 'ثبت سفارش انجام نشد.');
+      return;
+    }
+
+    document.getElementById('ltOrderResult').innerHTML=
+      '<div style="padding:15px;background:#e8f1e8;border:1px solid #b8cfb8;color:#355c35">'+
+      'سفارش با موفقیت ثبت شد. شماره سفارش: <strong>'+
+      data.orderNo+
+      '</strong></div>';
+
+    ltCart.length=0;
+    ltRenderCart();
+
+  }catch(error){
+    alert('خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.');
+  }
+}
 document.addEventListener('DOMContentLoaded',ltRenderCart);
 </script>
 
