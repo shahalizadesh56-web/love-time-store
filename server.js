@@ -95,7 +95,64 @@ app.get('/api/payment/callback', (req,res) => {
 });
 
 app.get('/api/health', (req,res) => res.json({ok:true,service:'LOVE TIME API'}));
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
+function adminAuth(req, res, next) {
+  if (!ADMIN_PASSWORD) {
+    return res.status(503).json({error:'ADMIN_PASSWORD تنظیم نشده است.'});
+  }
+
+  if (req.get('x-admin-password') !== ADMIN_PASSWORD) {
+    return res.status(401).json({error:'رمز مدیریت اشتباه است.'});
+  }
+
+  next();
+}
+
+app.get('/admin', (req, res) => {
+  res.sendFile(new URL('./admin.html', import.meta.url).pathname);
+});
+
+app.get('/api/admin/orders', adminAuth, (req, res) => {
+  const orders = db.prepare(
+    'SELECT * FROM orders ORDER BY id DESC'
+  ).all();
+
+  const itemStmt = db.prepare(
+    'SELECT product_id,name,price,quantity FROM order_items WHERE order_id=?'
+  );
+
+  res.json(
+    orders.map(o => ({
+      ...o,
+      items: itemStmt.all(o.id)
+    }))
+  );
+});
+
+app.patch('/api/admin/orders/:orderNo', adminAuth, (req, res) => {
+  const allowed = [
+    'pending',
+    'confirmed',
+    'shipped',
+    'completed',
+    'cancelled'
+  ];
+
+  if (!allowed.includes(req.body?.status)) {
+    return res.status(400).json({error:'وضعیت نامعتبر است.'});
+  }
+
+  const result = db.prepare(
+    'UPDATE orders SET status=? WHERE order_no=?'
+  ).run(req.body.status, req.params.orderNo);
+
+  if (!result.changes) {
+    return res.status(404).json({error:'سفارش پیدا نشد.'});
+  }
+
+  res.json({ok:true});
+});
 const PORT = Number(process.env.PORT || 3000);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`LOVE TIME API running on port ${PORT}`);
