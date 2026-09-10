@@ -629,13 +629,7 @@ function ltAddToProCart(){
 function ltQtyCart(i,n){ltCart[i].qty+=n;if(ltCart[i].qty<1)ltCart.splice(i,1);ltRenderCart()}
 function ltRemoveCart(i){ltCart.splice(i,1);ltRenderCart()}
 function ltOpenCheckout(){if(!ltCart.length){alert('ابتدا حداقل یک محصول به سبد خرید اضافه کنید.');return}document.getElementById('ltCheckout').classList.add('show');document.getElementById('ltCheckout').scrollIntoView({behavior:'smooth',block:'center'})}
-function ltSubmitOrder(){
-  const n=document.getElementById('ltName').value.trim(),p=document.getElementById('ltPhone').value.trim(),a=document.getElementById('ltAddress').value.trim();
-  if(!n||!/^09\d{9}$/.test(p)||!a){alert('لطفاً نام، شماره موبایل معتبر و آدرس را کامل وارد کنید.');return}
-  const order='LT-'+Math.floor(10000000+Math.random()*90000000);
-  document.getElementById('ltOrderResult').innerHTML='<div style="padding:15px;background:#e8f1e8;border:1px solid #b8cfb8;color:#355c35">سفارش آزمایشی با موفقیت ثبت شد. شماره سفارش: <strong>'+order+'</strong></div>';
-  ltCart.length=0;ltRenderCart();
-}
+
 document.addEventListener('DOMContentLoaded',ltRenderCart);
 </script>
 
