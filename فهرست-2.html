@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOVE TIME | فروشگاه</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f3eb;color:#201b16;font-family:Tahoma,Arial,sans-serif}
+header{background:#171513;color:#fff;padding:16px 6%;display:flex;align-items:center;justify-content:space-between;gap:15px;position:sticky;top:0;z-index:5}
+.logo{font-size:24px;font-weight:bold;color:#e6ca8a}.cart{background:#c8a05a;border:0;padding:10px 15px;border-radius:25px;font-weight:bold;cursor:pointer}
+.hero{padding:70px 7%;background:linear-gradient(120deg,#171513,#493a29);color:#fff}
+.hero h1{font-size:clamp(38px,7vw,72px);margin:0 0 18px}.hero p{line-height:2;color:#eee0c9;max-width:650px}
+.wrap{max-width:1150px;margin:auto;padding:45px 18px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:#fff;border:1px solid #eadfce;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px #0000000b}
+.img{height:280px;background:#eee}.img img{width:100%;height:100%;object-fit:cover}.info{padding:18px}.price{font-weight:bold;color:#9b7338;margin:12px 0}
+button{border:0;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:bold}.add{background:#211c18;color:#fff;width:100%}
+.drawer{position:fixed;inset:0;background:#0008;display:none;z-index:20}.drawer.show{display:block}.panel{background:#fff;width:min(450px,94vw);height:100%;margin-right:auto;padding:20px;overflow:auto}
+.item{display:grid;grid-template-columns:60px 1fr auto;gap:10px;border-bottom:1px solid #eee;padding:12px 0}.item img{width:60px;height:60px;object-fit:cover;border-radius:8px}
+input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;margin:5px 0 12px;font:inherit}.checkout{display:none}.checkout.show{display:block}.success{display:none;text-align:center;padding:40px}.success.show{display:block}
+@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="logo">LOVE TIME</div><button class="cart" onclick="openCart()">سبد خرید (<span id="count">0</span>)</button></header>
+<section class="hero"><h1>عطرِ ماندگار، انتخابِ خاص</h1><p>فروشگاه آنلاین LOVE TIME؛ محصولات را انتخاب کنید، به سبد خرید اضافه کنید و سفارش خود را ثبت کنید.</p></section>
+
+<div class="wrap">
+<h2>محصولات</h2><div id="products" class="grid"></div>
+<div id="checkout" class="checkout card" style="padding:22px;margin-top:30px">
+<h2>ثبت سفارش</h2>
+<label>نام و نام خانوادگی</label><input id="name" placeholder="مثلاً رقیه شاهعلیزاده">
+<label>شماره موبایل</label><input id="phone" placeholder="09123456789" inputmode="numeric">
+<label>آدرس کامل</label><textarea id="address" placeholder="آدرس کامل برای ارسال"></textarea>
+<button class="add" onclick="submitOrder()">ثبت سفارش</button>
+<div id="formMsg"></div>
+</div>
+<div id="success" class="success card"><div style="font-size:48px">✓</div><h2>سفارش ثبت شد</h2><p>شماره سفارش شما:</p><div id="orderNo" style="font-size:24px;font-weight:bold;color:#a27b37"></div><button onclick="location.reload()">بازگشت به فروشگاه</button></div>
+</div>
+
+<div id="drawer" class="drawer" onclick="if(event.target===this)closeCart()"><div class="panel"><h2>سبد خرید</h2><div id="cart"></div><hr><div><b>جمع: <span id="total">0</span> تومان</b></div><button class="add" style="margin-top:15px" onclick="goCheckout()">ادامه و ثبت سفارش</button><button onclick="closeCart()" style="margin-top:8px;width:100%">بستن</button></div></div>
+
+<script>
+let products=[],cart=[];
+const fmt=n=>new Intl.NumberFormat('fa-IR').format(Number(n||0));
+async function init(){
+ const r=await fetch('/api/products'); products=await r.json(); renderProducts();
+}
+function renderProducts(){
+ productsEl=document.getElementById('products');
+ productsEl.innerHTML=products.map(p=>`<article class="card"><div class="img"><img src="${esc(p.image||'')}" onerror="this.style.display='none'"></div><div class="info"><h3>${esc(p.name)}</h3><small>${esc(p.category)}</small><div class="price">${fmt(p.price)} تومان</div><p>${esc(p.description||'')}</p><button class="add" onclick="add(${p.id})">افزودن به سبد</button></div></article>`).join('');
+}
+function add(id){const x=cart.find(i=>i.id===id);if(x)x.qty++;else{const p=products.find(p=>p.id===id);cart.push({id:p.id,name:p.name,price:Number(p.price),image:p.image,qty:1})}renderCart();openCart()}
+function renderCart(){
+ count.textContent=cart.reduce((a,x)=>a+x.qty,0);
+ total.textContent=fmt(cart.reduce((a,x)=>a+x.price*x.qty,0));
+ cartEl=document.getElementById('cart');
+ cartEl.innerHTML=cart.map((x,i)=>`<div class="item"><img src="${esc(x.image||'')}"><div>${esc(x.name)}<br>${fmt(x.price)} تومان<br>تعداد: ${x.qty}</div><button onclick="removeItem(${i})">حذف</button></div>`).join('')||'سبد خرید خالی است.';
+}
+function removeItem(i){cart.splice(i,1);renderCart()}
+function openCart(){drawer.classList.add('show');renderCart()}function closeCart(){drawer.classList.remove('show')}
+function goCheckout(){if(!cart.length){alert('سبد خرید خالی است.');return}closeCart();checkout.classList.add('show');checkout.scrollIntoView({behavior:'smooth'})}
+async function submitOrder(){
+ const payload={customer:{name:name.value,phone:phone.value,address:address.value},items:cart.map(x=>({productId:x.id,quantity:x.qty}))};
+ formMsg.textContent='در حال ثبت سفارش...';
+ try{
+  const r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await r.json();if(!r.ok)throw Error(d.error||'خطا');
+  checkout.classList.remove('show');success.classList.add('show');orderNo.textContent=d.orderNo;cart=[];renderCart();
+ }catch(e){formMsg.textContent=e.message}
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+init().catch(()=>productsEl.textContent='خطا در دریافت محصولات.');
+</script>
+</body>
+</html>
