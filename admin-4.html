@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOVE TIME | پنل مدیریت</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f0e8;color:#211c17;font-family:Tahoma,Arial,sans-serif}
+.wrap{max-width:1200px;margin:auto;padding:18px}.card{background:#fff;border:1px solid #e7dccb;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 8px 28px #0000000d}
+.login{max-width:430px;margin:12vh auto}.hidden{display:none}.muted{color:#80766b;font-size:13px}
+input,select,textarea,button{font:inherit;border-radius:10px;padding:11px;border:1px solid #d8cbbb}
+input,select,textarea{width:100%;background:#fff;margin:6px 0 12px}textarea{min-height:80px}
+button{background:#b88a42;color:#fff;border:0;cursor:pointer;font-weight:bold;margin:4px}
+button.secondary{background:#2a2520}.danger{background:#9d3d3d!important}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:#211c18;color:#fff;border-radius:15px;padding:16px}.stat b{display:block;font-size:24px;margin-top:8px;color:#e4c37f}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:850px}.table th,.table td{padding:10px;border-bottom:1px solid #eee5da;text-align:right;font-size:13px;vertical-align:top}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{background:#eee5d9;color:#302820}.tab.active{background:#211c18;color:#fff}
+.msg{padding:10px;border-radius:10px;background:#f5efe5;margin:10px 0}.error{color:#a22}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="login" class="card login">
+<h2>LOVE TIME</h2>
+<div class="muted">ورود به پنل مدیریت فروشگاه</div>
+<input id="pass" type="password" placeholder="رمز مدیریت">
+<button onclick="login()">ورود</button>
+<div id="loginMsg" class="error"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="wrap">
+<div class="card">
+<h1>پنل مدیریت LOVE TIME</h1>
+<div class="muted">مدیریت سفارش‌ها و محصولات</div>
+<div class="tabs">
+<button id="ordersTab" class="tab active" onclick="showTab('orders')">سفارش‌ها</button>
+<button id="productsTab" class="tab" onclick="showTab('products')">محصولات</button>
+<button onclick="loadAll()">بروزرسانی</button>
+<button class="secondary" onclick="logout()">خروج</button>
+</div>
+</div>
+
+<section id="ordersPanel">
+<div class="stats">
+<div class="stat">کل سفارش‌ها<b id="all">0</b></div>
+<div class="stat">در انتظار<b id="pending">0</b></div>
+<div class="stat">تکمیل‌شده<b id="done">0</b></div>
+<div class="stat">فروش ثبت‌شده<b id="sales">0</b></div>
+</div>
+
+<div class="card">
+<h2>سفارش‌ها</h2>
+<div class="table-wrap"><table class="table">
+<thead><tr><th>شماره</th><th>مشتری</th><th>اقلام</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ</th></tr></thead>
+<tbody id="rows"></tbody>
+</table></div>
+</div>
+</section>
+
+<section id="productsPanel" class="hidden">
+<div class="card">
+<h2>ثبت محصول جدید</h2>
+<div class="form-grid">
+<div><label>نام محصول</label><input id="pName"></div>
+<div><label>دسته‌بندی</label><input id="pCat" placeholder="زنانه / مردانه / یونیسکس"></div>
+<div><label>قیمت (تومان)</label><input id="pPrice" type="number"></div>
+<div><label>لینک تصویر</label><input id="pImage" placeholder="https://..."></div>
+</div>
+<label>توضیحات</label><textarea id="pDesc"></textarea>
+<button onclick="addProduct()">ثبت محصول</button>
+<div id="productMsg"></div>
+</div>
+
+<div class="card">
+<h2>محصولات موجود</h2>
+<div id="products"></div>
+</div>
+</section>
+</div>
+</div>
+
+<script>
+let pw=sessionStorage.getItem('lt_admin')||'';
+const fmt=n=>new Intl.NumberFormat('fa-IR').format(Number(n||0));
+const headers=()=>({'Content-Type':'application/json','x-admin-password':pw});
+
+async function req(url,opt={}){
+ const r=await fetch(url,{...opt,headers:{...headers(),...(opt.headers||{})}});
+ const d=await r.json().catch(()=>({}));
+ if(!r.ok)throw Error(d.error||'خطا');
+ return d;
+}
+async function login(){
+ pw=document.getElementById('pass').value.trim();
+ try{
+  await req('/api/admin/orders');
+  sessionStorage.setItem('lt_admin',pw);
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  loadAll();
+ }catch(e){
+  pw='';
+  document.getElementById('loginMsg').textContent=e.message;
+ }
+}
+function logout(){sessionStorage.removeItem('lt_admin');location.reload()}
+function showTab(tab){
+ document.getElementById('ordersPanel').classList.toggle('hidden',tab!=='orders');
+ document.getElementById('productsPanel').classList.toggle('hidden',tab!=='products');
+ document.getElementById('ordersTab').classList.toggle('active',tab==='orders');
+ document.getElementById('productsTab').classList.toggle('active',tab==='products');
+ if(tab==='products')loadProducts();
+}
+async function loadAll(){await loadOrders();await loadProducts()}
+async function loadOrders(){
+ try{
+  const a=await req('/api/admin/orders');let p=0,d=0,s=0;
+  document.getElementById('rows').innerHTML=a.map(o=>{
+   if(o.status==='pending')p++;
+   if(o.status==='completed')d++;
+   s+=Number(o.total);
+   return `<tr>
+   <td>${esc(o.order_no)}</td>
+   <td>${esc(o.customer_name)}<br>${esc(o.phone)}<br>${esc(o.address)}</td>
+   <td>${(o.items||[]).map(x=>esc(x.name)+' × '+x.quantity).join('، ')}</td>
+   <td>${fmt(o.total)} تومان</td>
+   <td><select onchange="changeStatus('${esc(o.order_no)}',this.value)">${opts(o.status)}</select></td>
+   <td>${esc(o.created_at||'')}</td></tr>`;
+  }).join('')||'<tr><td colspan="6">سفارشی ثبت نشده است.</td></tr>';
+  all.textContent=fmt(a.length);pending.textContent=fmt(p);done.textContent=fmt(d);sales.textContent=fmt(s)+' تومان';
+ }catch(e){alert(e.message)}
+}
+function opts(s){return [['pending','در انتظار'],['confirmed','تأیید شده'],['shipped','ارسال شده'],['completed','تکمیل شده'],['cancelled','لغو شده']].map(x=>`<option value="${x[0]}" ${s===x[0]?'selected':''}>${x[1]}</option>`).join('')}
+async function changeStatus(no,status){
+ try{await req('/api/admin/orders/'+encodeURIComponent(no),{method:'PATCH',body:JSON.stringify({status})});loadOrders()}catch(e){alert(e.message)}
+}
+async function loadProducts(){
+ try{
+  const a=await req('/api/admin/products');
+  document.getElementById('products').innerHTML=a.map(p=>`
+  <div class="card">
+   <b>${esc(p.name)}</b> — ${esc(p.category)} — ${fmt(p.price)} تومان
+   <div class="muted">${esc(p.description||'')}</div>
+   <button onclick="editProduct(${p.id})">ویرایش</button>
+   <button class="secondary" onclick="toggleProduct(${p.id},${p.active?0:1})">${p.active?'غیرفعال کردن':'فعال کردن'}</button>
+  </div>`).join('')||'محصولی وجود ندارد.';
+ }catch(e){alert(e.message)}
+}
+async function addProduct(){
+ try{
+  await req('/api/admin/products',{method:'POST',body:JSON.stringify({
+   name:pName.value,category:pCat.value,price:pPrice.value,image:pImage.value,description:pDesc.value
+  })});
+  pName.value=pCat.value=pPrice.value=pImage.value=pDesc.value='';
+  productMsg.textContent='محصول با موفقیت ثبت شد.';
+  loadProducts();
+ }catch(e){productMsg.textContent=e.message}
+}
+async function editProduct(id){
+ const name=prompt('نام محصول جدید را وارد کنید:'); if(name===null)return;
+ const category=prompt('دسته‌بندی:', 'زنانه'); if(category===null)return;
+ const price=prompt('قیمت به تومان:'); if(price===null)return;
+ const image=prompt('لینک تصویر (در صورت نیاز):',''); if(image===null)return;
+ const description=prompt('توضیحات:',''); if(description===null)return;
+ try{
+  const current=(await req('/api/admin/products')).find(x=>x.id===id);
+  await req('/api/admin/products/'+id,{method:'PATCH',body:JSON.stringify({
+   name,category,price,image,description,active:current.active
+  })});
+  loadProducts();
+ }catch(e){alert(e.message)}
+}
+async function toggleProduct(id,active){
+ try{
+  const current=(await req('/api/admin/products')).find(x=>x.id===id);
+  await req('/api/admin/products/'+id,{method:'PATCH',body:JSON.stringify({
+   name:current.name,category:current.category,price:current.price,image:current.image||'',description:current.description||'',active
+  })});
+  loadProducts();
+ }catch(e){alert(e.message)}
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+if(pw)login();
+</script>
+</body>
+</html>
