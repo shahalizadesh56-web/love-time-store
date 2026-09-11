@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import crypto from 'node:crypto';
 import { z } from 'zod';
-import { db } from './db.js';
+import { db } from '../db.js';
 
 const app = express();
 
@@ -11,7 +11,9 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.sendFile(new URL('./index.html', import.meta.url).pathname);
+  res.sendFile(
+    new URL('../فهرست-2.html', import.meta.url).pathname
+  );
 });
 
 /* =========================
@@ -259,7 +261,7 @@ function adminAuth(req, res, next) {
 
 app.get('/admin', (req, res) => {
   res.sendFile(
-    new URL('./admin.html', import.meta.url).pathname
+    new URL('../admin-4.html', import.meta.url).pathname
   );
 });
 
