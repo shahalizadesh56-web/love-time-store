@@ -1,1 +1,1 @@
-import './src/سرور.js';
+import './سرور.js';
